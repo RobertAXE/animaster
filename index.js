@@ -1,21 +1,27 @@
+// Хранилище активных анимаций сердцебиения
 const heartBeatingAnimations = new Map();
 addListeners();
-const anim = animaster()
+anim = animaster()
 function addListeners() {
     document.getElementById('fadeInPlay')
         .addEventListener('click', function () {
             const block = document.getElementById('fadeInBlock');
             anim.fadeIn(block, 5000);
         });
-    document.getElementById('fadeOutPlay')
+    document.getElementById('fadeInReset')
         .addEventListener('click', function () {
-            const block = document.getElementById('fadeOutBlock');
-            anim.fadeOut(block, 5000);
+            const block = document.getElementById('fadeInBlock');
+            resetFadeIn(block);
         });
     document.getElementById('movePlay')
         .addEventListener('click', function () {
             const block = document.getElementById('moveBlock');
             anim.move(block, 1000, {x: 100, y: 10});
+        });
+    document.getElementById('moveReset')
+        .addEventListener('click', function () {
+            const block = document.getElementById('moveBlock');
+            resetMoveAndScale(block);
         });
 
     document.getElementById('scalePlay')
@@ -23,17 +29,34 @@ function addListeners() {
             const block = document.getElementById('scaleBlock');
             anim.scale(block, 1000, 1.25);
         });
+    document.getElementById('scaleReset')
+        .addEventListener('click', function () {
+            const block = document.getElementById('scaleBlock');
+            resetMoveAndScale(block);
+        });
 
+    // Новые анимации
     document.getElementById('moveAndHidePlay')
         .addEventListener('click', function () {
             const block = document.getElementById('moveAndHideBlock');
             anim.moveAndHide(block, 5000);
+        });
+    document.getElementById('moveAndHideReset')
+        .addEventListener('click', function () {
+            const block = document.getElementById('moveAndHideBlock');
+            resetMoveAndScale(block);
+            resetFadeOut(block);
         });
 
     document.getElementById('showAndHidePlay')
         .addEventListener('click', function () {
             const block = document.getElementById('showAndHideBlock');
             anim.showAndHide(block, 3000);
+        });
+    document.getElementById('showAndHideReset')
+        .addEventListener('click', function () {
+            const block = document.getElementById('showAndHideBlock');
+            resetFadeOut(block);
         });
 
     document.getElementById('heartBeatingPlay')
@@ -55,6 +78,47 @@ function addListeners() {
                 block.style.transform = getTransform(null, 1);
             }
         });
+    document.getElementById('heartBeatingReset')
+        .addEventListener('click', function () {
+            const block = document.getElementById('heartBeatingBlock');
+
+            if (heartBeatingAnimations.has(block)) {
+                heartBeatingAnimations.get(block).stop();
+                heartBeatingAnimations.delete(block);
+            }
+            resetMoveAndScale(block);
+        });
+}
+
+/**
+ * Служебная функция: сброс fadeIn (появление)
+ * @param element — HTMLElement
+ */
+function resetFadeIn(element) {
+    element.classList.remove('show');
+    element.classList.add('hide');
+    element.style.transitionDuration = null;
+    element.style.opacity = null;
+}
+
+/**
+ * Служебная функция: сброс fadeOut (исчезновение)
+ * @param element — HTMLElement
+ */
+function resetFadeOut(element) {
+    element.classList.remove('hide');
+    element.classList.add('show');
+    element.style.transitionDuration = null;
+    element.style.opacity = null;
+}
+
+/**
+ * Служебная функция: сброс move и scale (трансформации)
+ * @param element — HTMLElement
+ */
+function resetMoveAndScale(element) {
+    element.style.transform = null;
+    element.style.transitionDuration = null;
 }
 
 function animaster() {
@@ -105,6 +169,8 @@ function animaster() {
 
 
 function heartBeating(element) {
+    resetMoveAndScale(element); // Сбрасываем перед началом
+
     let intervalId = null;
     let timeoutId = null;
     let isActive = true;
@@ -123,6 +189,7 @@ function heartBeating(element) {
         element.style.transform = getTransform(null, 1);
     };
 
+    // Функция для запуска цикла
     const startBeat = () => {
         if (!isActive)
             return;
@@ -132,11 +199,15 @@ function heartBeating(element) {
         }, 500);
     };
 
+    // Запускаем первый удар
     startBeat();
+
+    // Запускаем интервал для повторения
     intervalId = setInterval(() => {
         startBeat();
     }, 1000);
 
+    // Возвращаем объект с методом stop
     return {
         stop: function() {
             isActive = false;
@@ -148,6 +219,8 @@ function heartBeating(element) {
                 clearTimeout(timeoutId);
                 timeoutId = null;
             }
+            
+            // Сбрасываем трансформацию
             element.style.transitionDuration = '300ms';
             element.style.transform = getTransform(null, 1);
         }
