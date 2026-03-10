@@ -1,3 +1,6 @@
+// Хранилище активных анимаций сердцебиения
+const heartBeatingAnimations = new Map();
+
 addListeners();
 const anim = animaster()
 function addListeners() {
@@ -36,10 +39,33 @@ function addListeners() {
             showAndHide(block, 3000);
         });
 
+    // Анимация сердцебиения с возможностью остановки
     document.getElementById('heartBeatingPlay')
         .addEventListener('click', function () {
             const block = document.getElementById('heartBeatingBlock');
-            heartBeating(block);
+            
+            // Останавливаем предыдущую анимацию для этого блока, если она была
+            if (heartBeatingAnimations.has(block)) {
+                heartBeatingAnimations.get(block).stop();
+            }
+            
+            // Запускаем новую и сохраняем контроллер
+            const controller = heartBeating(block);
+            heartBeatingAnimations.set(block, controller);
+        });
+
+    document.getElementById('heartBeatingStop')
+        .addEventListener('click', function () {
+            const block = document.getElementById('heartBeatingBlock');
+            
+            // Останавливаем анимацию, если она есть
+            if (heartBeatingAnimations.has(block)) {
+                heartBeatingAnimations.get(block).stop();
+                heartBeatingAnimations.delete(block);
+                
+                // Возвращаем блок в исходное состояние
+                block.style.transform = getTransform(null, 1);
+            }
         });
 }
 
@@ -136,32 +162,61 @@ function showAndHide(element, duration) {
  * Бесконечное сердцебиение: увеличение до 1.4, потом назад до 1.
  * Каждый шаг длится 0.5 секунды.
  * @param element — HTMLElement
+ * @returns {Object} контроллер с методом stop для остановки анимации
  */
 function heartBeating(element) {
-    // Сбросим возможные старые интервалы (чтобы при повторном нажатии не плодились)
-    if (element.dataset.heartBeatInterval) {
-        clearInterval(element.dataset.heartBeatInterval);
-    }
+    let intervalId = null;
+    let timeoutId = null;
+    let isActive = true;
 
     const step1 = () => {
+        if (!isActive) return;
         element.style.transitionDuration = '500ms';
         element.style.transform = getTransform(null, 1.4);
     };
 
     const step2 = () => {
+        if (!isActive) return;
         element.style.transitionDuration = '500ms';
         element.style.transform = getTransform(null, 1);
     };
 
-    // Запускаем циклически
-    step1(); // сразу первый удар
-    const intervalId = setInterval(() => {
+    // Функция для запуска цикла
+    const startBeat = () => {
+        if (!isActive) return;
+        
         step1();
-        setTimeout(step2, 500); // через 0.5 сек возвращаем
-    }, 1000); // полный цикл удара
+        timeoutId = setTimeout(() => {
+            step2();
+        }, 500);
+    };
 
-    // Сохраняем id, чтобы можно было остановить позже (если потребуется)
-    element.dataset.heartBeatInterval = intervalId;
+    // Запускаем первый удар
+    startBeat();
+
+    // Запускаем интервал для повторения
+    intervalId = setInterval(() => {
+        startBeat();
+    }, 1000);
+
+    // Возвращаем объект с методом stop
+    return {
+        stop: function() {
+            isActive = false;
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+            
+            // Сбрасываем трансформацию
+            element.style.transitionDuration = '300ms';
+            element.style.transform = getTransform(null, 1);
+        }
+    };
 }
 
 /**
